@@ -1,4 +1,4 @@
-# adventOfCode
+# Advent of Code ⭐️
 
 Repository to store my Advent of Code solutions 😊
 
