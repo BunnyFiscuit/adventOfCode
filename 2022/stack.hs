@@ -5,7 +5,9 @@ module Stack (
   pop,
   peek,
   isEmpty,
-  size
+  size,
+  toList,
+  fromList
 ) where
 
 import Numeric.Natural
@@ -33,3 +35,9 @@ isEmpty (Stack _ _ ) = False
 
 size :: Stack a -> Natural
 size (Stack sz _) = sz
+
+toList :: Stack a -> [a]
+toList (Stack _ xs) = xs
+
+fromList :: [a] -> Stack a
+fromList = foldl push empty . reverse
