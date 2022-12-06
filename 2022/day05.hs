@@ -6,7 +6,7 @@ import Data.Stack
 
 main :: IO ()
 main = do
-  contents <- readF 5
+  contents <- readF' "test"
   let spl  = break (=="") contents
   let ss   = reverse $ tail (reverse (fst spl))
   let ms   = map toMovement (drop 1 (snd spl))
