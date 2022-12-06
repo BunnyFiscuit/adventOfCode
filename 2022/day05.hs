@@ -6,21 +6,17 @@ import Stack
 
 main :: IO ()
 main = do
-  contents <- readF' "test"
+  contents <- readF' "5"
   let spl  = break (=="") contents
   let ss   = reverse $ tail (reverse (fst spl))
   let ms   = map toMovement (drop 1 (snd spl))
   let ts   = map toStack (transpose (map (sanStack . rmBracks) ss))
-  putStrLn $ "part 1: " ++ show (getPeeks (run ms ts))
+  putStrLn $ "part 1: " ++ show (getPeeks (run ms ts move))
   putStrLn $ "part 2: " ++ show (getPeeks (run' ms ts))
 
-run :: [Move] -> [MStack] -> [MStack]
-run [] ss     = ss
-run (m:ms) ss = run ms (move m ss)
-
-run' :: [Move] -> [MStack] -> [MStack]
-run' [] ss     = ss
-run' (m:ms) ss = run' ms (move' m ss)
+run :: [Move] -> [MStack] -> (Move -> [MStack] -> [MStack]) -> [MStack]
+run [] ss     _ = ss
+run (m:ms) ss f = run ms (f m ss) f
 
 getPeeks xs = concat $ map (fromJust . peek) xs
 
