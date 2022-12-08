@@ -4,12 +4,35 @@ import FileReader
 import Data.List
 import Data.Maybe
 
+f = Folder ["/"] 48381165 [Folder ["d","/"] 24933642 [],Folder ["a","/"] 94853 [Folder ["e","a","/"] 584 []]]
+
+maxSize    = 70000000
+neededSize = 30000000
+
 main :: IO ()
 main = do
-  contents <- readF' "test"
+  contents <- readF' "7"
   -- print (parseLines contents)
   let fs = buildIt (parseLines contents) (Folder ["/"] 0 []) []
-  print fs
+  -- print fs
+  let paths = allPaths fs
+  let allSizes = map (folderSize . (fromJust . \x -> search x fs)) paths
+  let smallSizes = filter (<=100000) allSizes
+  putStrLn $ "part 1: " ++ show (sum smallSizes)
+  let spaceUsed = head allSizes
+  let spaceLeft = maxSize - spaceUsed
+  let minimumSpaceNeeded = neededSize - spaceLeft
+  let bigSizes   = filter (>minimumSpaceNeeded) allSizes
+  putStrLn $ "part 2: " ++ show (minimum bigSizes)
+
+folderSize :: Folder -> Int
+folderSize (Folder name size sub) = size + subSize
+  where subSize = sum $ map folderSize sub
+
+allPaths :: Folder -> [Path]
+allPaths (Folder name _ [] ) = [name]
+allPaths (Folder name _ sub) = name : concatMap allPaths sub
+  where sub' = concatMap allPaths sub
 
 type Path = [String]
 type Size = Int
@@ -73,5 +96,3 @@ replace replacing@(Folder rname _ _) current@(Folder cname sz sub)
   | concat cname `isSuffixOf` concat rname = Folder cname sz sub'
   | otherwise        = current
   where sub' = map (replace replacing) sub
-
-f = Folder ["/"] 48381165 [Folder ["d","/"] 0 [], Folder ["a","/"] 0 [Folder ["e","a","/"] 0 []]]
