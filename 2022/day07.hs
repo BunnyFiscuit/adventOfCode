@@ -20,6 +20,7 @@ main = do
   let smallSizes = filter (<=100000) allSizes
   putStrLn $ "part 1: " ++ show (sum smallSizes)
   let spaceUsed = head allSizes
+  putStrLn $ "spaceUsed: " ++ show spaceUsed
   let spaceLeft = maxSize - spaceUsed
   let minimumSpaceNeeded = neededSize - spaceLeft
   let bigSizes   = filter (>minimumSpaceNeeded) allSizes
