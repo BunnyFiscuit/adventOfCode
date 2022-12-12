@@ -13,8 +13,8 @@ main = do
   print stack
   let sumSignals = sum [ c * v | (c,v) <- stack, c `elem` cycles]
   putStrLn $ "part 1: " ++ show sumSignals
-  let r2 = foldr draw ini ex
-  print r2
+  let r2 = foldr draw ini stack
+  putStrLn (unlines (fst r2))
 
 cycles = [20, 60, 100, 140, 180, 220]
 
@@ -43,12 +43,13 @@ buildStack (Add n:ops) v c
 drawIt :: [(Cycle, Value)] -> (CRT, Sprite) -> CRT
 drawIt [] (crt,_) = crt
 drawIt (x:xs) crtsp = drawIt xs (draw x crtsp)
+
 -- step through this. why aint it working?
 draw :: (Cycle, Value) -> (CRT, Sprite) -> (CRT,Sprite)
 draw (c,v) (crt, sp) = (crt', moveSprite v)
   where crt' = replace (crtIndex (c-1)) row' crt
         row  = crt !! crtIndex (c-1)
-        row' = row ++ [sp !! (c-1)]
+        row' = row ++ [sp !! mod (c-1) 40]
 
 ex :: [(Int, Int)]
 ex = [(1,1),(2,1),(3,16),(4,16),(5,5)]
