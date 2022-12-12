@@ -8,11 +8,13 @@ main :: IO ()
 main = do
   contents <- readF' "test"
   let ops = parse contents
-  --print ops
-  let r1  = buildStack ops 1 0
-  print r1
-  let sumSignals = sum [ c * v | (c,v) <- r1, c `elem` cycles]
+  -- print ops
+  let stack  = buildStack ops 1 0
+  print stack
+  let sumSignals = sum [ c * v | (c,v) <- stack, c `elem` cycles]
   putStrLn $ "part 1: " ++ show sumSignals
+  let r2 = foldr draw ini ex
+  print r2
 
 cycles = [20, 60, 100, 140, 180, 220]
 
@@ -38,14 +40,19 @@ buildStack (Add n:ops) v c
   = (c+1, v) : (c+2, v) : buildStack ops (v+n) (c+2)
 
 
+drawIt :: [(Cycle, Value)] -> (CRT, Sprite) -> CRT
+drawIt [] (crt,_) = crt
+drawIt (x:xs) crtsp = drawIt xs (draw x crtsp)
+-- step through this. why aint it working?
 draw :: (Cycle, Value) -> (CRT, Sprite) -> (CRT,Sprite)
 draw (c,v) (crt, sp) = (crt', moveSprite v)
   where crt' = replace (crtIndex (c-1)) row' crt
-        row  = crt !! (c-1)
-        row' = row ++ [sp !! v]
+        row  = crt !! crtIndex (c-1)
+        row' = row ++ [sp !! (c-1)]
 
 ex :: [(Int, Int)]
 ex = [(1,1),(2,1),(3,16),(4,16),(5,5)]
+ini = (initCRT, initSprite)
 
 moveSprite :: Int -> Sprite
 moveSprite 0 = initSprite
