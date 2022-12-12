@@ -8,15 +8,17 @@ main :: IO ()
 main = do
   contents <- readF' "test"
   let ops = parse contents
-  print ops
+  -- print ops
   let stack  = buildStack ops 1 0
   -- print stack
   let sumSignals = sum [ c * v | (c,v) <- stack, c `elem` cycles]
   -- putStrLn $ "part 1: " ++ show sumSignals
+  print (take 21 ops)
   let crt = buildCrt ops (0,1) initSprite initCRT
-  let ls  = map length crt
+  let ls  = map length (fst crt)
   print ls
-  putStrLn $ unlines crt
+  putStrLn $ unlines (fst crt)
+  print (snd crt)
 
 operations = [Add 15,Add (-11),Add 6,Add (-3),Add 5,Add (-1),Add (-8),Add 13,Add 4,NoOp,Add (-1),Add 5,Add (-1),Add 5,Add (-1),Add 5,Add (-1),Add 5,Add (-1),Add (-35),Add 1,Add 24,Add (-19),Add 1,Add 16,Add (-11),NoOp,NoOp,Add 21,Add (-15),NoOp,NoOp,Add (-3),Add 9,Add 1,Add (-3),Add 8,Add 1,Add 5,NoOp,NoOp,NoOp,NoOp,NoOp,Add (-36),NoOp,Add 1,Add 7,NoOp,NoOp,NoOp,Add 2,Add 6,NoOp,NoOp,NoOp,NoOp,NoOp,Add 1,NoOp,NoOp,Add 7,Add 1,NoOp,Add (-13),Add 13,Add 7,NoOp,Add 1,Add (-33),NoOp,NoOp,NoOp,Add 2,NoOp,NoOp,NoOp,Add 8,NoOp,Add (-1),Add 2,Add 1,NoOp,Add 17,Add (-9),Add 1,Add 1,Add (-3),Add 11,NoOp,NoOp,Add 1,NoOp,Add 1,NoOp,NoOp,Add (-13),Add (-19),Add 1,Add 3,Add 26,Add (-30),Add 12,Add (-1),Add 3,Add 1,NoOp,NoOp,NoOp,Add (-9),Add 18,Add 1,Add 2,NoOp,NoOp,Add 9,NoOp,NoOp,NoOp,Add (-1),Add 2,Add (-37),Add 1,Add 3,NoOp,Add 15,Add (-21),Add 22,Add (-6),Add 1,NoOp,Add 2,Add 1,NoOp,Add (-10),NoOp,NoOp,Add 20,Add 1,Add 2,Add 2,Add (-6),Add (-11),NoOp,NoOp,NoOp]
 
@@ -43,20 +45,20 @@ buildStack (NoOp :ops) v c = (c+1, v) : buildStack ops v (c+1)
 buildStack (Add n:ops) v c
   = (c+1, v) : (c+2, v) : buildStack ops (v+n) (c+2)
 
-buildCrt :: [Op] -> (Cycle, Value) -> Sprite -> CRT -> CRT
-buildCrt [] _ _ crt = crt
+buildCrt :: [Op] -> (Cycle, Value) -> Sprite -> CRT -> (CRT, (Cycle, Value))
+buildCrt [] cv _ crt = (crt, cv)
 
 buildCrt (NoOp :ops) (c,v) sp crt = buildCrt ops (c+1,v) sp crt'
   where crt' = replace (crtIndex c) row' crt
-        row  = crt !! (crtIndex c)
-        row' = (take c row) ++ [sp !! (mod c 39)]
+        row  = crt !! crtIndex c
+        row' = take c row ++ [sp !! mod c 39]
 
 buildCrt (Add n:ops) (c,v) sp crt = buildCrt ops (c+2,v+n) sp' crt''
   where ci    = crtIndex c
-        row i = (take c i) ++ [sp !! (mod i 39)]
+        row   = crt !! ci ++ [sp !! mod c 39]
         crt'  = replace ci row crt
         ci'   = crtIndex (c+1)
-        row'  = (take (c+1) (crt' !! ci')) ++ [sp !! (mod (c+1) 39)]
+        row'  = crt' !! ci' ++ [sp !! mod (c+1) 39]
         crt'' = replace ci' row' crt'
         sp'   = moveSprite (v+n)
 
@@ -69,8 +71,7 @@ moveSprite 0 = initSprite
 moveSprite n = replicate (n-1) '.' ++ "###" ++ replicate (38-n) '.'
 
 drawIt :: [(Cycle, Value)] -> (CRT, Sprite) -> (CRT, Sprite)
-drawIt []     crtsp = crtsp
-drawIt (x:xs) crtsp = drawIt xs (draw x crtsp)
+drawIt xs crtsp = foldl (flip draw) crtsp xs
 
 draw :: (Cycle, Value) -> (CRT, Sprite) -> (CRT,Sprite)
 draw (c,v) (crt, sp) = (crt', msp)
