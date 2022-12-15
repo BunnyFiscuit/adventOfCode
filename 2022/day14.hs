@@ -1,24 +1,122 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module Day14 where
 import FileReader
 import Data.List
 import Data.Maybe
+import Control.Concurrent
+
+type Rock  = (Int, Int)
+type Sand  = (Int, Int)
+type Grain = (Int, Int)
+
+data Space = Sand | Rock | Air | SandStart deriving (Show, Eq, Read)
+
+data Cave = Cave {
+  rocks  :: [Rock],
+  sand   :: [Sand],
+  grain  :: Grain,
+  offset :: Int
+}
 
 main :: IO ()
 main = do
   contents <- readF' "14"
   let rocks = nub (concatMap (createRocks . words) contents)
   let offset = minimum (map fst rocks)
+  let yMax  = maximum (map snd rocks) + 2
+  let xMax  = maximum (map fst rocks) + (500-offset)
+  let rocksWithFloor = rocks ++ [(x, yMax) | x <- [-2..xMax]]
+  --print rocks
   print offset
-  let rocks' = map (\(x,y) -> (y, x-offset)) rocks
-  print rocks'
-  sand <- run rocks' [] offset
-  let maxX  = maximum (map fst rocks')
-  let maxY  = maximum (map snd rocks')
-  let grid  = [if (x,y) `elem` rocks' then Rock else if (x,y) `elem` sand then Sand else Air | x <- [0..maxX], y <- [0..maxY]]
-  let spaceGrid = groupIt grid (maxX+1)
+  let rocks' = map (\(x,y) -> (x-offset,y)) rocks
+  --print rocks'
+  let initCave = Cave { rocks = rocks', sand = [], grain = (500-offset, 0), offset = offset }
+  drawGrid initCave
+  sand' <- run initCave 0
+  drawGrid (initCave { sand = sand'})
+  print (length sand')
+
+
+drawGrid :: Cave -> IO ()
+drawGrid Cave{rocks, sand, grain, offset} = do
+  putStrLn ""
+  let maxX  = maximum (map fst rocks) + 2
+  let maxY  = maximum (map snd rocks)
+  let grid  = [if (x,y) `elem` rocks then Rock else if (x,y) == (500-offset,0) then SandStart else if (x,y) `elem` sand then Sand else Air | y <- [0..maxY], x <- [-5..maxX]]
+  let spaceGrid = groupIt grid (abs (-5 - maxX) + 1)
+  --mapM_ print spaceGrid
   mapM_ (putStrLn . showSpace) spaceGrid
-  print (length sand)
+  putStrLn ""
+
+run :: Cave -> Int -> IO [Sand]
+run c i = do
+  c' <- tick c
+  --putStrLn $ "Diff: " ++ show (sand c' \\ sand c)
+  --drawGrid c 
+  --threadDelay 500000
+  if sand c' == sand c then return (sand c') else run (c { sand = sand c'}) (i+1)
+
+tick :: Cave -> IO Cave
+tick cave = do
+  maybeG <- tick' cave
+  case maybeG of
+    Nothing -> return cave
+    Just g  -> return $ cave { sand = g : sand cave}
+
+-- create new ticks. 
+
+tick' :: Cave -> IO (Maybe Grain)
+tick' c@Cave{rocks, sand, grain = g@(x,y), offset}
+  | x < leftMost || x > rightMost || y >= downMost = do
+    --print grain
+    --print $ "x < leftMost || x > rightMost || y > downMost -- " ++ show (x < leftMost || x > rightMost || y > downMost)
+    return Nothing
+
+  | safeDown             = do
+    --print grain
+    --print ("safeDown: " ++ show safeDown)
+    tick' (c { grain = down})
+
+  | not safeDown && safeLeft = do
+    --print grain
+    --print ("safeDown && safeLeft: " ++ show (safeDown && safeLeft))
+    tick' (c { grain = downLeft})
+
+  | not safeDown && not safeLeft && safeRight = do
+    tick' (c { grain = downRight})
+
+  | otherwise = do
+    --drawGrid c
+    return $ Just g
+  where down      = addDown g
+        downLeft  = addDownLeft g
+        downRight = addDownRight g
+        safeDown  = check rocks sand down == Air
+        sandDown  = check rocks sand down == Sand
+        safeLeft  = check rocks sand downLeft == Air
+        safeRight = check rocks sand downRight == Air
+        leftMost  = minimum (map fst rocks)
+        rightMost = maximum (map fst rocks)
+        downMost  = maximum (map snd rocks)
+
+check :: [Rock] -> [Sand] -> Grain -> Space
+check rocks sand grain@(x,y)
+  | rockDown  = Rock
+  | sandDown  = Sand
+  | otherwise = Air
+  where rockDown  = isJust (grain `elemIndex` rocks)
+        sandDown  = isJust (grain `elemIndex` sand )
+        downMost  = maximum (map snd rocks)
+
+addDown :: Grain -> Grain
+addDown (x,y) = (x,y+1)
+
+addDownLeft :: Grain -> Grain
+addDownLeft (x,y) = (x-1,y+1)
+
+addDownRight :: Grain -> Grain
+addDownRight (x,y) = (x+1,y+1)
 
 groupIt :: [Space] -> Int -> [[Space]]
 groupIt [] _ = []
@@ -31,18 +129,7 @@ showSpace [] = []
 showSpace (Air:sp)  = '.' : showSpace sp
 showSpace (Rock:sp) = '#' : showSpace sp
 showSpace (Sand:sp) = 'o' : showSpace sp
-
-run :: [Rock] -> [Sand] -> Int -> IO [Sand]
-run rocks sand offset = do
-  sand' <- tick rocks sand offset
-  if sand' == sand then return sand else run rocks sand' offset
-
-
-type Rock  = (Int, Int)
-type Sand  = (Int, Int)
-type Grain = (Int, Int)
-
-data Space = Sand | Rock | Air deriving (Show, Eq, Read)
+showSpace (SandStart:sp) = '+' : showSpace sp
 
 point :: String -> Rock
 point xs = (read x :: Int, read (drop 1 y) :: Int)
@@ -56,61 +143,6 @@ createRocks (p1:"->":p2:rest)
   | otherwise = zip [(min ax bx)..(max ax bx)] (repeat ay) ++ createRocks (p2:rest)
   where (ax,ay) = point p1
         (bx,by) = point p2
-
-tick :: [Rock] -> [Sand] -> Int -> IO [Sand]
-tick rocks sand offset = do
-  maybeG <- tick' rocks sand (0,500-offset)
-  case maybeG of
-    Nothing -> return sand
-    Just g  -> return $ g : sand
-
-tick' :: [Rock] -> [Sand] -> Grain -> IO (Maybe Grain)
-tick' rocks sand grain@(x,y)
-  | x < leftMost || x > rightMost || y > downMost = do
-    --print grain
-    --print $ "x < leftMost || x > rightMost || y > downMost -- " ++ show (x < leftMost || x > rightMost || y > downMost)
-    return Nothing
-
-  | safeDown             = do
-    --print grain
-    --print ("safeDown: " ++ show safeDown)
-    tick' rocks sand down
-
-  | sandDown && safeLeft = do
-    --print grain
-    --print ("safeDown && safeLeft: " ++ show (safeDown && safeLeft))
-    tick' rocks sand downLeft
-
-  | sandDown && not safeLeft && safeRight = tick' rocks sand downRight
-
-  | otherwise = return $ Just grain
-  where down      = addDown grain
-        downLeft  = addDownLeft grain
-        downRight = addDownRight grain
-        safeDown  = check rocks sand down == Air
-        sandDown  = check rocks sand down == Sand
-        safeLeft  = check rocks sand downLeft == Air
-        safeRight = check rocks sand downRight == Air
-        leftMost  = minimum (map fst rocks)
-        rightMost = maximum (map fst rocks)
-        downMost  = maximum (map snd rocks)
-
-check :: [Rock] -> [Sand] -> Grain -> Space
-check rocks sand grain
-  | rockDown  = Rock
-  | sandDown  = Sand
-  | otherwise = Air
-  where rockDown  = isJust (grain `elemIndex` rocks)
-        sandDown  = isJust (grain `elemIndex` sand )
-
-addDown :: Grain -> Grain
-addDown (x,y) = (x+1,y)
-
-addDownLeft :: Grain -> Grain
-addDownLeft (x,y) = (x+1,y-1)
-
-addDownRight :: Grain -> Grain
-addDownRight (x,y) = (x+1,y+1)
 
 rs :: [(Int, Int)]
 rs = [(498,4),(498,5),(498,6),(496,6),(497,6),(502,4),(503,4),(502,5),(502,6),(502,7),(502,8),(502,9),(494,9),(495,9),(496,9),(497,9),(498,9),(499,9),(500,9),(501,9)]
