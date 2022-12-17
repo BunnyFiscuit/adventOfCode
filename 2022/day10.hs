@@ -6,18 +6,20 @@ import GHC.Natural
 
 main :: IO ()
 main = do
-  contents <- readF' "test"
+  contents <- readF' "10"
   let ops = parse contents
-  -- print ops
-  let stack  = buildStack ops 1 0
-  print stack
+  --print ops
+  let stack  = buildStack ops 1 1
+  --print stack
   let sumSignals = sum [ c * v | (c,v) <- stack, c `elem` cycles]
   putStrLn $ "part 1: " ++ show sumSignals
-  let r2 = foldr draw ini stack
-  putStrLn (unlines (fst r2))
+  
+  putStrLn $ "part 2:"
+  r2' <- bStack ops 0 1
+  -- hard to read but: FPGPHFGH
+  putStrLn $ unlines (splitRes (map snd r2'))
 
 cycles = [20, 60, 100, 140, 180, 220]
-
 initSprite = "###....................................."
 initCRT    = ["","","","","",""]
 
@@ -33,23 +35,43 @@ parse ("noop":ls)                  = NoOp : parse ls
 parse (('a':'d':'d':'x':' ':n):ls) = Add (read n) : parse ls
 parse (_:ls)                       = parse ls
 
-buildStack :: [Op] -> Int -> Cycle -> [(Cycle, Value)]
+buildStack :: [Op] -> Cycle -> Value  -> [(Cycle, Value)]
 buildStack [] _ _ = []
-buildStack (NoOp :ops) v c = (c+1, v) : buildStack ops v (c+1)
-buildStack (Add n:ops) v c
-  = (c+1, v) : (c+2, v) : buildStack ops (v+n) (c+2)
+buildStack (NoOp :ops) c v = (c, v) : buildStack ops (c+1) v
+buildStack (Add n:ops) c v
+  = (c, v) : (c+1, v) : buildStack ops (c+2) (v+n)
 
+bStack :: [Op] -> Cycle -> Value -> IO [(Cycle, Char)]
+bStack [] _ _ = return []
+bStack (NoOp  : ops) c v = do
+  next <- bStack ops (c+1) v
+  return $ (c,ch) : next
+  where ch = moveSprite v !! (mod c 40)
+bStack (Add n : ops) c v = do
+  next <- bStack ops (c+2) (v+n)
+  return $ (c,ch) : (c+1, ch') : next 
+  where sp  = moveSprite v
+        ch  = sp !! (mod c 40)
+        ch' = sp !! mod (c+1) 40
 
-drawIt :: [(Cycle, Value)] -> (CRT, Sprite) -> CRT
-drawIt [] (crt,_) = crt
-drawIt (x:xs) crtsp = drawIt xs (draw x crtsp)
+splitRes :: String -> [String]
+splitRes [] = []
+splitRes xs = take 40 xs : splitRes (drop 40 xs)
 
 -- step through this. why aint it working?
 draw :: (Cycle, Value) -> (CRT, Sprite) -> (CRT,Sprite)
 draw (c,v) (crt, sp) = (crt', moveSprite v)
-  where crt' = replace (crtIndex (c-1)) row' crt
-        row  = crt !! crtIndex (c-1)
-        row' = row ++ [sp !! mod (c-1) 40]
+  where crt' = replace (crtIndex c) row' crt
+        row  = crt !! crtIndex c
+        row' = row ++ [sp !! mod c 40]
+
+draw' :: [(Cycle, Value)] -> (CRT, Sprite) -> IO (CRT)
+draw' [] (crt,_) = return crt
+draw' ((c,v):cvs) (crt, sp) = do
+  draw' cvs (crt', moveSprite v)
+  where crt' = replace (crtIndex c) row' crt
+        row  = crt !! crtIndex c
+        row' = row ++ [sp !! mod c 40]
 
 ex :: [(Int, Int)]
 ex = [(1,1),(2,1),(3,16),(4,16),(5,5)]
