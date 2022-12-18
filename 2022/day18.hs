@@ -2,13 +2,12 @@ module Day18 where
 import FileReader
 import Data.List
 
-data Cube  = C Int Int Int deriving (Show, Read)
+type Cube = (Int, Int, Int)
 type Faces = Int
 
-instance Eq (Cube) where
-  (==) (C a b c) (C x y z) = a == x && b == y && c == z
 
-ex = [C 1 1 1,C 2 1 1]
+ex :: [Cube]
+ex = [(1, 1, 1), (2, 1, 1)]
 
 main :: IO ()
 main = do
@@ -16,10 +15,17 @@ main = do
   let cubes = map parseCube contents
   -- print cubes
   let rs = map (\x -> check cubes x 6) cubes
-  print (sum rs)
+  putStrLn $ "part 1: " ++ show (sum rs)
+  let ((minX, minY, minZ),(maxX, maxY, maxZ)) = dims cubes
+  let possiblePockets = [(x,y,z) | x <- [minX..maxX], y <- [minY..maxY], z <- [minZ..maxZ]] \\ cubes
+  let pockets = [pocket | pocket <- possiblePockets, isPocket cubes pocket]
+  print pockets
+  let rs' = map (\x -> check cubes x 6) pockets
+  print rs'
+  putStrLn $ "part 2: " ++ show (sum rs - (sum rs'))
 
 parseCube :: String -> Cube
-parseCube xs = C x y z
+parseCube xs = (x, y, z)
   where sp = wordsWhen (==',') xs 
         x  = read (sp !! 0) :: Int
         y  = read (sp !! 1) :: Int
@@ -27,26 +33,23 @@ parseCube xs = C x y z
 
 check :: [Cube] -> Cube -> Faces -> Faces
 check [] _ f = f
-check xs c f = f - (adjX + adjY + adjZ)
-  where adjX = checkX xs c
-        adjY = checkY xs c
-        adjZ = checkZ xs c
+check cubes (x,y,z) f = f - vn
+  where vn   = sum [1 | cube <- neighbors (x,y,z), cube `elem` cubes]
 
+neighbors :: Cube -> [Cube]
+neighbors (x,y,z) = [
+  ((x-1), y, z), ((x+1), y, z),
+  (x, (y-1), z), (x, (y+1), z),
+  (x, y, (z-1)), (x, y, (z+1))]
 
-checkX :: [Cube] -> Cube -> Faces
-checkX [] c = 0
-checkX xs (C x y z) = xa + xb
-  where xa = if C (x-1) y z `elem` xs then 1 else 0
-        xb = if C (x+1) y z `elem` xs then 1 else 0
+dims :: [Cube] -> (Cube, Cube)
+dims cubes = ((minimum xs, minimum ys, minimum zs), (maximum xs, maximum ys, maximum zs))
+  where xs = map (\(x,_,_) -> x) cubes
+        ys = map (\(_,y,_) -> y) cubes
+        zs = map (\(_,_,z) -> z) cubes
 
-checkY :: [Cube] -> Cube -> Faces
-checkY [] c = 0
-checkY xs (C x y z) = xa + xb
-  where xa = if C x (y-1) z `elem` xs then 1 else 0
-        xb = if C x (y+1) z `elem` xs then 1 else 0
-
-checkZ :: [Cube] -> Cube -> Faces
-checkZ [] c = 0
-checkZ xs (C x y z) = xa + xb
-  where xa = if C x y (z-1) `elem` xs then 1 else 0
-        xb = if C x y (z+1) `elem` xs then 1 else 0
+isPocket :: [Cube] -> Cube -> Bool
+isPocket cubes (x,y,z) = and [chX, chY, chZ]
+  where chX = and [cube `elem` cubes | cube <- [(x-1, y, z) , (x+1, y, z)]]
+        chY = and [cube `elem` cubes | cube <- [(x, y-1, z) , (x, y+1, z)]]
+        chZ = and [cube `elem` cubes | cube <- [(x, y, z-1) , (x, y, z+1)]]
