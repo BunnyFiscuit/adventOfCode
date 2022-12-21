@@ -23,25 +23,25 @@ main :: IO ()
 main = do
   contents <- readF' "14"
   let rocks = nub (concatMap (createRocks . words) contents)
-  let offset = minimum (map fst rocks)
+  let offset = minimum (map fst rocks) - 5
   let yMax  = maximum (map snd rocks) + 2
   let xMax  = maximum (map fst rocks) + (500-offset)
-  let rocksWithFloor = rocks ++ [(x, yMax) | x <- [-2..xMax]]
+  let floor = [(x, yMax) | x <- [(500-offset)-10..xMax]]
+  let rocksWithFloor = rocks ++ floor
   --print rocks
   print offset
-  let rocks' = map (\(x,y) -> (x-offset,y)) rocks
+  let rocks' = map (\(x,y) -> (x-offset,y)) rocksWithFloor
   --print rocks'
   let initCave = Cave { rocks = rocks', sand = [], grain = (500-offset, 0), offset = offset }
-  drawGrid initCave
+  --drawGrid initCave
   sand' <- run initCave 0
-  drawGrid (initCave { sand = sand'})
+  --drawGrid (initCave { sand = sand'})
   print (length sand')
 
 
 drawGrid :: Cave -> IO ()
 drawGrid Cave{rocks, sand, grain, offset} = do
-  putStrLn ""
-  let maxX  = maximum (map fst rocks) + 2
+  let maxX  = maximum (map fst rocks)
   let maxY  = maximum (map snd rocks)
   let grid  = [if (x,y) `elem` rocks then Rock else if (x,y) == (500-offset,0) then SandStart else if (x,y) `elem` sand then Sand else Air | y <- [0..maxY], x <- [-5..maxX]]
   let spaceGrid = groupIt grid (abs (-5 - maxX) + 1)
@@ -52,10 +52,11 @@ drawGrid Cave{rocks, sand, grain, offset} = do
 run :: Cave -> Int -> IO [Sand]
 run c i = do
   c' <- tick c
-  --putStrLn $ "Diff: " ++ show (sand c' \\ sand c)
-  --drawGrid c 
-  --threadDelay 500000
-  if sand c' == sand c then return (sand c') else run (c { sand = sand c'}) (i+1)
+  let diff = sand c' \\ sand c
+  if mod i 100 == 0 then putStr "." else pure ()
+  --drawGrid c
+  --threadDelay 250000
+  if sand c' == sand c || diff == [(500 - offset c,0)] then do putStrLn ""; return (sand c') else run (c { sand = sand c'}) (i+1)
 
 tick :: Cave -> IO Cave
 tick cave = do
@@ -64,36 +65,27 @@ tick cave = do
     Nothing -> return cave
     Just g  -> return $ cave { sand = g : sand cave}
 
--- create new ticks. 
-
 tick' :: Cave -> IO (Maybe Grain)
 tick' c@Cave{rocks, sand, grain = g@(x,y), offset}
-  | x < leftMost || x > rightMost || y >= downMost = do
-    --print grain
+  | y >= downMost = do
     --print $ "x < leftMost || x > rightMost || y > downMost -- " ++ show (x < leftMost || x > rightMost || y > downMost)
     return Nothing
 
   | safeDown             = do
-    --print grain
-    --print ("safeDown: " ++ show safeDown)
     tick' (c { grain = down})
 
   | not safeDown && safeLeft = do
-    --print grain
-    --print ("safeDown && safeLeft: " ++ show (safeDown && safeLeft))
     tick' (c { grain = downLeft})
 
   | not safeDown && not safeLeft && safeRight = do
     tick' (c { grain = downRight})
 
   | otherwise = do
-    --drawGrid c
     return $ Just g
   where down      = addDown g
         downLeft  = addDownLeft g
         downRight = addDownRight g
         safeDown  = check rocks sand down == Air
-        sandDown  = check rocks sand down == Sand
         safeLeft  = check rocks sand downLeft == Air
         safeRight = check rocks sand downRight == Air
         leftMost  = minimum (map fst rocks)
@@ -105,7 +97,7 @@ check rocks sand grain@(x,y)
   | rockDown  = Rock
   | sandDown  = Sand
   | otherwise = Air
-  where rockDown  = isJust (grain `elemIndex` rocks)
+  where rockDown  = isJust (grain `elemIndex` rocks) || y == maximum (map snd rocks)
         sandDown  = isJust (grain `elemIndex` sand )
         downMost  = maximum (map snd rocks)
 
