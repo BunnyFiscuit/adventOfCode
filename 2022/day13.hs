@@ -8,10 +8,19 @@ main :: IO ()
 main = do
   contents <- readF' "13"
   let gs = group' contents
-  print gs
+  printRows gs
   rs <- run gs 1 []
   print rs
   print (sum rs)
+
+printRows :: [(String, String)] -> IO ()
+printRows [] = return ()
+printRows (x:xs) = do
+  let (a,b) = x
+  putStrLn $ show a
+  putStrLn $ show b
+  putStrLn ""
+  printRows xs
 
 run :: [(String, String)] -> Int -> [Int] -> IO [Int]
 run [] _ n = return n

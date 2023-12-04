@@ -3,6 +3,7 @@ module Day12 where
 import FileReader
 import Data.List
 import Data.Maybe
+import Data.Char
 
 alphs = ['a'..'z']
 ex = ["Sabqponm","abcryxxl","accszExk","acctuvwj","abdefghi"]
@@ -11,11 +12,11 @@ e = (2,5)
 
 type Point = (Int, Int)
 type Row   = [Int]
-type Path  = [Int]
+type Path  = [Point]
 type Grid  = [[Int]]
 data RGrid  = G {
   grid    :: Grid,
-  path    :: [Path],
+  path    :: Path,
   visited :: [Point],
   current :: Point,
   start   :: Point,
@@ -24,22 +25,18 @@ data RGrid  = G {
 
 initGrid :: [String] -> RGrid
 initGrid input = G {
-  grid    = parseAll input,
+  grid    = g,
   path    = [],
-  visited = [findLetter 'S' input (0,0)],
-  current = findLetter 'S' input (0,0),
-  start   = findLetter 'S' input (0,0),
-  end     = findLetter 'E' input (0,0)
-}
+  visited = [s],
+  current = s,
+  start   = s,
+  end     = gFind isEnd g
+} where g = map (map ord) input
+        s = gFind isStart g
 
-main :: IO ()
-main = do
-  contents <- readF' "12"
-  print contents
-  let gridRecord = initGrid contents
-  putStrLn $ "Start: " ++ show (start gridRecord)
-  putStrLn $ "End  : " ++ show (end gridRecord)
-  mapM_ print (grid gridRecord)
+printGrid :: Grid -> IO ()
+printGrid g = do
+  mapM_ (putStrLn . show) g
 
 findPath :: RGrid -> [Path]
 findPath g@G{grid, path, current, start, end} = undefined
@@ -63,20 +60,21 @@ findLetter c (x:xs) (row,col) = case c `elemIndex` x of
   Nothing -> findLetter c xs (row+1, col)
   Just n -> (row, n)
 
-parseAll :: [String] -> [[Int]]
-parseAll = map parseS
+gFind :: (Int -> Bool) -> Grid -> Point
+gFind f g = head [(x,y) | y <- [0..length g-1], x <- [0..length (head g)-1], f (getVal g (x,y))]
 
-parseS :: String -> Row
-parseS [] = []
-parseS ('S':xs) = 1 : parseS xs
-parseS ('E':xs) = 26 : parseS xs
-parseS (x  :xs) = fromJust (elemIndex x alphs) + 1 : parseS xs
+isStart :: Int -> Bool
+isStart = (==83)
+
+isEnd :: Int -> Bool
+isEnd = (==69)
 
 canVisit :: Grid -> Int -> Point -> Bool
 canVisit grid v (x,y)
-  | x < 0 || x > rows    = False
-  | y < 0 || y > columns = False
-  | otherwise            = abs (v - v') <= 1
+  | x < 0 || x > rows      = False
+  | y < 0 || y > columns   = False
+  | isStart v' || isEnd v' = True
+  | otherwise              = abs (v - v') <= 1
   where v'      = getVal grid (x,y)
         rows    = length grid
         columns = length (head grid)
@@ -85,4 +83,13 @@ add :: Point -> Point -> Point
 add (x,y) (a,b) = (x+a,y+b)
 
 getVal :: Grid -> Point -> Int
-getVal grid (x,y) = (grid !! x) !! y
+getVal grid (x,y) = (grid !! y) !! x
+
+main :: IO ()
+main = do
+  contents <- readF' "12"
+  print contents
+  let gridRecord = initGrid contents
+  putStrLn $ "Start: " ++ show (start gridRecord)
+  putStrLn $ "End  : " ++ show (end gridRecord)
+  mapM_ print (grid gridRecord)
