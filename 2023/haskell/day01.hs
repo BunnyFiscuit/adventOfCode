@@ -14,12 +14,9 @@ main = do
   putStrLn $ show y
   putStrLn $ show $ sum y
 
-numbers = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
-
 -- Find the first and last number
 getDigits :: String -> Int
 getDigits s = (getFirstDigit s * 10) + getFirstDigit (reverse s)
-
 
 getFirstDigit :: String -> Int
 getFirstDigit s = read x :: Int
