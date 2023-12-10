@@ -2,11 +2,21 @@ module Day7 where
 import FileReader
 import Data.List
 import Data.Char
+import qualified Data.Map as M
+
 
 main :: IO ()
 main = do
-  contents <- readF' "test"
-  print contents
+  contents <- readF' "7"
+  let ws = map words contents
+  let m = M.fromList $ map (\x -> (x !! 0, read (x !! 1) :: Int)) ws
+  --print $ M.toList m
+  let hands = map head ws
+  --print $ hands
+  let sortedHands = sortBy compareHand hands
+  print $ sortedHands
+  let winnings = countWinnings m sortedHands 1
+  print $ winnings
 
 -- 1. High card ✅
 -- 2. One pair ✅
@@ -52,7 +62,28 @@ compareHand' [] [] = EQ
 compareHand' [] _ = LT
 compareHand' _ [] = GT
 compareHand' (x:xs) (y:ys)
-  | x > y = LT
-  | x < y = GT
-  | otherwise = compareHand' xs ys
+  | x == y = compareHand' xs ys
+  | otherwise = comp' x y -- switch comp here
+
+-- part 1
+comp :: Char -> Char -> Ordering
+comp 'A' _ = GT
+comp 'K' a = if a == 'A' then LT else GT
+comp 'Q' a = if a `elem` "AK" then LT else GT
+comp 'J' a = if a `elem` "AKQ" then LT else GT
+comp 'T' a = if a `elem` "AKQJ" then LT else GT
+comp a b = compare a b
+
+-- part 2
+comp' :: Char -> Char -> Ordering
+comp' 'A' _ = GT
+comp' 'K' a = if a == 'A' then LT else GT
+comp' 'Q' a = if a `elem` "AK" then LT else GT
+comp' 'J' a = if a `elem` "AKQ" then LT else GT
+comp' 'T' a = if a `elem` "AKQJ" then LT else GT
+comp' a b = compare a b
+
+countWinnings :: M.Map String Int -> [String] -> Int -> Int
+countWinnings _ [] _ = 0
+countWinnings m (x:xs) n = ((m M.! x) * n) + countWinnings m xs (n+1)
 
