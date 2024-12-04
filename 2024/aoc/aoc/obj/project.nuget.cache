@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "7gtbKq9G6/HTxBufHYx7lRJNaV0YLrgDtcumnRK5PeMouYLMsI0tTk19L8PjxAq8PI8gAji2gjjrIaapUpMl/w==",
+  "success": true,
+  "projectFilePath": "/Users/sarosh/Devies/adventofcode/2024/aoc/aoc/aoc.fsproj",
+  "expectedPackageFiles": [
+    "/Users/sarosh/.nuget/packages/fsharp.core/8.0.200/fsharp.core.8.0.200.nupkg.sha512"
+  ],
+  "logs": []
+}
