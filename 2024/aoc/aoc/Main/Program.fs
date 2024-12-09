@@ -1,5 +1,5 @@
 ﻿module Program
-open aoc.Day3.Solution
+open aoc.Day4.Solution
 
 [<EntryPoint>]
 let main args =

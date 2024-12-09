@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <Compile Include="Utility.fs" />
+        <Compile Include="Template.fs" />
         
         <Compile Include="Day1\Solution.fs" />
         <Content Include="Day1\input.txt">
@@ -31,6 +32,14 @@
         </Content>
         <Content Include="Day3\input.txt">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+
+        <Compile Include="Day4\Solution.fs" />
+        <Content Include="Day4\input.txt">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="Day4\test.txt">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
         
         <Compile Include="Main\Program.fs" />
